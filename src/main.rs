@@ -1,4 +1,5 @@
 mod error;
+mod parser;
 mod scanner;
 
 use crate::{error::Result, scanner::Scanner};
@@ -24,7 +25,7 @@ fn run_prompt() -> Result<()> {
 
     let mut line = String::new();
     sin.read_line(&mut line)?;
-    line = line.trim_end().to_string();
+
     if line.is_empty() {
       println!("exiting");
       break;

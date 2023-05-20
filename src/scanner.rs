@@ -98,10 +98,11 @@ impl<'a> Scanner<'a> {
   pub fn scan_tokens(&mut self) -> std::result::Result<Vec<Token>, Vec<anyhow::Error>> {
     let mut tokens: Vec<Token> = vec![];
     let mut errs: Vec<anyhow::Error> = vec![];
+
     dbg!(self.chars.clone().collect::<String>());
+
     while !self.is_at_end() {
       self.start = self.current;
-      println!("loop");
       let token_attempt = self.scan_token();
 
       match token_attempt {
@@ -120,7 +121,7 @@ impl<'a> Scanner<'a> {
   }
 
   fn is_at_end(&self) -> bool {
-    self.current >= self.source.len()
+    self.chars.clone().as_str().len() == 0
   }
 
   fn advance(&mut self) -> Option<char> {
@@ -139,9 +140,8 @@ impl<'a> Scanner<'a> {
   }
 
   fn match_next(&mut self, c: char) -> bool {
-    let next = self.chars.clone().next();
-    if next == Some(c) {
-      self.chars.next();
+    if c == self.peek() {
+      self.advance();
       return true;
     }
     false
