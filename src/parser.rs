@@ -1,19 +1,27 @@
 use crate::error::Result;
 use crate::scanner::Token;
 
-#[derive(Debug, Clone)]
-enum Expression {
-  Literal(Literal),
-  Binary {
-    exp1: Box<Expression>,
-    op: Operator,
-    exp2: Box<Expression>,
-  },
-  Unary {
-    op: UnaryOp,
-    exp: Box<Expression>,
-  },
-  Grouping(Box<Expression>),
+type Expression = Equality;
+
+type Equality = (Comparison, Vec<(EqualOp, Comparison)>);
+
+type Comparison = (Term, Vec<(ComparisonOp, Term)>);
+
+type Term = (Factor, Vec<(TermOp, Factor)>);
+
+type Factor = (Unary, Vec<(UnaryOp, Unary)>);
+
+enum Unary {
+  Unary { op: UnaryOp, unary: Box<Unary> },
+  Primary(Primary),
+}
+enum Primary {
+  Num(f64),
+  String(String),
+  True,
+  False,
+  Nil,
+  Expression(Box<Expression>),
 }
 
 #[derive(Debug, Clone)]
@@ -39,44 +47,53 @@ enum Operator {
   Slash,
 }
 
+enum TermOp {
+  Minus,
+  Plus,
+}
+
+enum FactorOp {
+  Slash,
+  Star,
+}
+
+enum ComparisonOp {
+  Greater,
+  GreaterEqual,
+  Less,
+  LessEqual,
+}
+
+enum EqualOp {
+  BangEqual,
+  EqualEqual,
+}
+
 #[derive(Debug, Clone)]
 enum UnaryOp {
   Minus,
   Bang,
 }
 
-fn print_exp(exp: Expression) -> String {
-  match exp {
-    Expression::Literal(lit) => format!("{:?}", lit),
-    Expression::Binary { exp1, op, exp2 } => {
-      format!("{} {:?} {}", print_exp(exp1.as_ref().clone()), op, print_exp(exp2.as_ref().clone()))
-    },
-    Expression::Unary { op, exp } => format!("{:?}({})", op, print_exp(exp.as_ref().clone())),
-    Expression::Grouping(exp) => format!("({})", print_exp(exp.as_ref().clone())),
-  }
+pub struct Parser {
+  tokens: Vec<Token>,
+  current: u64,
 }
 
-#[cfg(test)]
-mod tests {
-  use crate::parser::{print_exp, Expression, Literal, Operator, UnaryOp};
-
-  #[test]
-
-  fn print_tree() {
-    let exp = Expression::Unary {
-      op: UnaryOp::Minus,
-      exp: Box::new(Expression::Binary {
-        exp1: Box::new(Expression::Grouping(Box::new(Expression::Binary {
-          exp1: Box::new(Expression::Literal(Literal::Num(42.))),
-          op: Operator::Plus,
-          exp2: Box::new(Expression::Literal(Literal::Num(42.))),
-        }))),
-        op: Operator::Minus,
-        exp2: Box::new(Expression::Literal(Literal::Num(42.))),
-      }),
-    };
-    //  op: Operator::Plus, exp2: Literal::Num(42.) }), op: Operator::Minus, exp2: Box::new(Literal::Num(2.)) }
-    let yo = print_exp(exp);
-    println!("{}", yo);
+impl Parser {
+  pub fn new(tokens: Vec<Token>) -> Self {
+    Parser { tokens, current: 0 }
   }
+
+  fn expression(&mut self) -> Expression {
+    return self.equality();
+  }
+
+  fn equality(&mut self) -> Equality {
+    let expr: Comparison = self.comparison();
+
+    expr
+  }
+
+  fn comparison(&mut self) -> Comparison {}
 }
