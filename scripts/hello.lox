@@ -1,0 +1,13 @@
+
+var language = "lox";
+
+class potet {
+    init() {
+        this.potet = "hei";
+    }
+
+
+    docker() {
+        print "haha";
+    }
+}
