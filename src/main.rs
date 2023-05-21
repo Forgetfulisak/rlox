@@ -11,8 +11,10 @@ use std::{
 
 fn run(source: String) -> Result<()> {
   let mut scanner = Scanner::new(source.as_str());
-  let tokens = scanner.scan_tokens();
-  dbg!(tokens);
+  let tokens = scanner.scan_tokens().unwrap();
+  let mut parser = parser::Parser::new(tokens);
+  let res = parser.parse();
+  dbg!(res);
   Ok(())
 }
 

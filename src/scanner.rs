@@ -208,7 +208,7 @@ impl<'a> Scanner<'a> {
 
   fn scan_token(&mut self) -> Result<Option<Token>> {
     let c = self.advance().context("avanced after reaching the end")?;
-    dbg!("Scanning token", c);
+    // dbg!("Scanning token", c);
     let token = match c {
       '(' => Some(Token::LeftParen),
       ')' => Some(Token::RightParen),
