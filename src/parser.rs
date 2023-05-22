@@ -137,7 +137,7 @@ impl TryFrom<Token> for Operator {
 }
 
 #[derive(Debug, Clone)]
-enum UnaryOp {
+pub enum UnaryOp {
   Minus,
   Bang,
 }

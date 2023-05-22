@@ -1,4 +1,5 @@
 mod error;
+mod interpreter;
 mod parser;
 mod scanner;
 
@@ -12,8 +13,9 @@ use std::{
 fn run(source: String) -> Result<()> {
   let mut scanner = Scanner::new(source.as_str());
   let tokens = scanner.scan_tokens().unwrap();
+  dbg!(&tokens);
   let mut parser = parser::Parser::new(tokens);
-  let res = parser.parse();
+  let res = parser.parse()?;
   dbg!(res);
   Ok(())
 }
@@ -32,6 +34,7 @@ fn run_prompt() -> Result<()> {
       println!("exiting");
       break;
     }
+
     let res = run(line);
     match res {
       Ok(_) => (),
