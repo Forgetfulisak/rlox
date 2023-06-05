@@ -1,12 +1,12 @@
 use std::fmt::Display;
 
 use crate::error::Result;
-use crate::parser::{Expression, Literal, Operator, UnaryOp};
+use crate::parser::{Expression, Literal, Operator, Stmt, UnaryOp};
 
-pub fn interpreter(exp: Expression) {
-  let val = evaluate(exp);
-
-  println!("{}", val);
+pub fn interpreter(stmts: Vec<Stmt>) {
+  for stmt in stmts {
+    execute(stmt);
+  }
 }
 
 #[derive(Debug)]
@@ -16,6 +16,7 @@ pub enum LoxValue {
   Boolean(bool),
   Number(f64),
   String(String),
+  Void,
 }
 impl Display for LoxValue {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -25,6 +26,7 @@ impl Display for LoxValue {
       LoxValue::Boolean(b) => f.write_str(&format!("{}", b)),
       LoxValue::Number(n) => f.write_str(&format!("{}", n)),
       LoxValue::String(s) => f.write_str(&format!("{}", s)),
+      LoxValue::Void => f.write_str("Void"),
     }
   }
 }
@@ -76,6 +78,17 @@ fn is_less_eq(v1: LoxValue, v2: LoxValue) -> bool {
   }
 }
 
+pub fn execute(stmt: Stmt) -> LoxValue {
+  match stmt {
+    Stmt::ExprSttmt(exp) => evaluate(*exp),
+    Stmt::PrintStmt(exp) => {
+      let val = evaluate(*exp);
+      println!("{}", val);
+      LoxValue::Void
+    },
+  }
+}
+
 pub fn evaluate(exp: Expression) -> LoxValue {
   match exp {
     Expression::Literal(lit) => lit.into(),
@@ -95,16 +108,16 @@ pub fn evaluate(exp: Expression) -> LoxValue {
 
         (Operator::Plus, LoxValue::Number(n1), LoxValue::Number(n2)) => LoxValue::Number(n1 + n2),
         (Operator::Plus, LoxValue::String(s1), LoxValue::String(s2)) => LoxValue::String(s1 + &s2),
-        (Operator::Plus, v1, v2) => panic!("wrong type for Plus"),
+        (Operator::Plus, _v1, _v2) => panic!("wrong type for Plus"),
 
         (Operator::Minus, LoxValue::Number(n1), LoxValue::Number(n2)) => LoxValue::Number(n1 - n2),
-        (Operator::Minus, v1, v2) => panic!("wrong type for Minus"),
+        (Operator::Minus, _v1, _v2) => panic!("wrong type for Minus"),
 
         (Operator::Star, LoxValue::Number(n1), LoxValue::Number(n2)) => LoxValue::Number(n1 * n2),
-        (Operator::Star, v1, v2) => panic!("wrong type for Star"),
+        (Operator::Star, _v1, _v2) => panic!("wrong type for Star"),
 
         (Operator::Slash, LoxValue::Number(n1), LoxValue::Number(n2)) => LoxValue::Number(n1 / n2),
-        (Operator::Slash, v1, v2) => panic!("wrong type for Slash"),
+        (Operator::Slash, _v1, _v2) => panic!("wrong type for Slash"),
       }
     },
     Expression::Unary { op, exp } => match (op, *exp) {

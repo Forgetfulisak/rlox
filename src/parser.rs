@@ -2,79 +2,12 @@ use crate::error::Result;
 use crate::scanner::Token;
 use anyhow::anyhow;
 
-// type Expression = Equality;
+// struct program(Vec<Stmt>)
 
-// type Equality = (Comparison, Vec<(EqualOp, Comparison)>);
-
-// type Comparison = (Term, Vec<(ComparisonOp, Term)>);
-
-// type Term = (Factor, Vec<(TermOp, Factor)>);
-
-// type Factor = (Unary, Vec<(UnaryOp, Unary)>);
-
-// enum Unary {
-//   Unary { op: UnaryOp, unary: Box<Unary> },
-//   Primary(Primary),
-// }
-// enum Primary {
-//   Num(f64),
-//   String(String),
-//   True,
-//   False,
-//   Nil,
-//   Expression(Box<Expression>),
-// }
-
-// #[derive(Debug, Clone)]
-// enum Literal {
-//   Num(f64),
-//   String(String),
-//   True,
-//   False,
-//   Nil,
-// }
-
-// #[derive(Debug, Clone)]
-// enum Operator {
-//   EqualEqual,
-//   BangEqual,
-//   Less,
-//   LessEqual,
-//   Greater,
-//   GreaterEqual,
-//   Plus,
-//   Minus,
-//   Star,
-//   Slash,
-// }
-
-// enum TermOp {
-//   Minus,
-//   Plus,
-// }
-
-// enum FactorOp {
-//   Slash,
-//   Star,
-// }
-
-// enum ComparisonOp {
-//   Greater,
-//   GreaterEqual,
-//   Less,
-//   LessEqual,
-// }
-
-// enum EqualOp {
-//   BangEqual,
-//   EqualEqual,
-// }
-
-// #[derive(Debug, Clone)]
-// enum UnaryOp {
-//   Minus,
-//   Bang,
-// }
+pub enum Stmt {
+  ExprSttmt(Box<Expression>),
+  PrintStmt(Box<Expression>),
+}
 
 #[derive(Debug, Clone)]
 pub enum Expression {
@@ -151,10 +84,23 @@ impl Parser {
     Parser { tokens, current: 0 }
   }
 
-  pub fn parse(&mut self) -> Result<Expression> {
-    let exp = self.expression()?;
+  pub fn parse(&mut self) -> Result<Vec<Stmt>> {
+    let mut statements: Vec<Stmt> = vec![];
+    while !self.is_at_end() {
+      statements.push(self.statement()?)
+    }
+    // let exp = self.expression()?;
     // dbg!(self.tokens.len(), self.current);
-    Ok(exp)
+    Ok(statements)
+  }
+
+  fn is_at_end(&self) -> bool {
+    if let Token::Eof = self.peek() {
+      true
+    } else {
+      false
+    }
+    // self.current >= self.tokens.len()
   }
 
   fn advance(&mut self) -> Token {
@@ -194,6 +140,35 @@ impl Parser {
     self.tokens[self.current - 1].clone()
   }
 
+  fn statement(&mut self) -> Result<Stmt> {
+    if self.match1(Token::Print) {
+      self.print_statement()
+    } else {
+      self.expression_statment()
+    }
+  }
+
+  fn print_statement(&mut self) -> Result<Stmt> {
+    let exp = self.expression()?;
+    let semicolon = self.advance();
+    if let Token::Semicolon = semicolon {
+    } else {
+      Err(anyhow!("Expected ; after value"))?
+    }
+
+    Ok(Stmt::PrintStmt(Box::new(exp)))
+  }
+  fn expression_statment(&mut self) -> Result<Stmt> {
+    let exp = self.expression()?;
+    let semicolon = self.advance();
+    if let Token::Semicolon = semicolon {
+    } else {
+      Err(anyhow!("Expected ; after value"))?
+    }
+
+    Ok(Stmt::ExprSttmt(Box::new(exp)))
+  }
+
   fn expression(&mut self) -> Result<Expression> {
     return self.equality();
   }
@@ -220,7 +195,6 @@ impl Parser {
 
     while self.matchn(vec![Token::Greater, Token::GreaterEqual, Token::Less, Token::LessEqual]) {
       let op = self.previous();
-
       exp = Expression::Binary {
         exp1: Box::new(exp),
         op: op.try_into()?,
@@ -291,8 +265,8 @@ impl Parser {
         // self.advance();
         let exp = self.expression()?;
         let paren = self.advance();
-        dbg!(&self.tokens);
-        dbg!(&paren);
+        // dbg!(&self.tokens);
+        // dbg!(&paren);
 
         if let Token::RightParen = paren {
           Ok(exp)
