@@ -66,6 +66,13 @@ impl Interpreter {
         }
         LoxValue::Void
       },
+      Stmt::WhileStmt { cond, body } => {
+        while is_truthy(self.evaluate(cond.clone())) {
+          self.execute_stmt(*body.clone());
+        }
+
+        LoxValue::Void
+      },
     }
   }
 

@@ -13,11 +13,15 @@ pub enum Decl {
 #[derive(Debug, Clone)]
 pub enum Stmt {
   ExprStmt(Box<Expression>),
-  PrintStmt(Box<Expression>),
   IfStmt {
     cond: Expression,
     if_stmt: Box<Stmt>,
     else_stmt: Option<Box<Stmt>>,
+  },
+  PrintStmt(Box<Expression>),
+  WhileStmt {
+    cond: Expression,
+    body: Box<Stmt>,
   },
   Block(Vec<Decl>),
 }
@@ -45,16 +49,6 @@ pub enum Expression {
     and2: Box<Expression>,
   },
 }
-
-// #[derive(Debug, Clone)]
-// pub enum Logic {
-//   Unary(Box<Expression>),
-//   Binary {
-//     and1: Box<Expression>,
-//     op: Operator,
-//     and2: Box<Expression>,
-//   },
-// }
 
 #[derive(Debug, Clone)]
 pub enum Literal {
@@ -218,6 +212,8 @@ impl Parser {
       self.if_statement()
     } else if self.match1(Token::LeftBrace) {
       self.block_statement()
+    } else if self.match1(Token::While) {
+      self.while_statement()
     } else {
       self.expression_statment()
     }
@@ -255,6 +251,22 @@ impl Parser {
       if_stmt: stmt,
       else_stmt,
     })
+  }
+
+  fn while_statement(&mut self) -> Result<Stmt> {
+    if !self.match1(Token::LeftParen) {
+      Err(anyhow!("Expected ( in while-condition"))?
+    }
+
+    let cond = self.expression()?;
+
+    if !self.match1(Token::RightParen) {
+      Err(anyhow!("Expected ) after expression in while-condition"))?
+    }
+
+    let stmt = Box::new(self.statement()?);
+
+    Ok(Stmt::WhileStmt { cond, body: stmt })
   }
 
   fn print_statement(&mut self) -> Result<Stmt> {
