@@ -1,46 +1,20 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 
-use crate::parser::{Decl, Expression, Literal, Operator, Stmt, UnaryOp};
+use crate::parser::{Expression, Literal, Operator, Stmt, UnaryOp};
 
 pub struct Interpreter {
   pub values: HashMap<String, LoxValue>,
 }
 
 impl Interpreter {
-  pub fn interpret(&mut self, decls: Vec<Decl>) {
-    for decl in decls {
-      self.execute(decl);
+  pub fn interpret(&mut self, stmts: Vec<Stmt>) {
+    for stmt in stmts {
+      self.execute(stmt);
     }
   }
 
-  pub fn execute(&mut self, decl: Decl) -> LoxValue {
-    match decl {
-      Decl::VarDecl { ident, exp } => {
-        let val: LoxValue = match exp {
-          Some(exp) => self.evaluate(exp),
-          None => LoxValue::Nil,
-        };
-
-        self.values.insert(ident, val);
-        LoxValue::Void
-      },
-      Decl::Stmt(stmt) => self.execute_stmt(stmt),
-    }
-  }
-
-  fn val_from_lit(&self, lit: Literal) -> LoxValue {
-    match lit {
-      Literal::Num(n) => LoxValue::Number(n),
-      Literal::String(s) => LoxValue::String(s),
-      Literal::True => LoxValue::Boolean(true),
-      Literal::False => LoxValue::Boolean(false),
-      Literal::Nil => LoxValue::Nil,
-      Literal::Identifier(ident) => self.values.get(&ident).expect("Fetching variable").clone(),
-    }
-  }
-
-  pub fn execute_stmt(&mut self, stmt: Stmt) -> LoxValue {
+  pub fn execute(&mut self, stmt: Stmt) -> LoxValue {
     match stmt {
       Stmt::ExprStmt(exp) => self.evaluate(*exp),
       Stmt::PrintStmt(exp) => {
@@ -54,9 +28,9 @@ impl Interpreter {
         else_stmt,
       } => {
         if is_truthy(self.evaluate(cond)) {
-          self.execute_stmt(*if_stmt);
+          self.execute(*if_stmt);
         } else if let Some(stmt) = else_stmt {
-          self.execute_stmt(*stmt);
+          self.execute(*stmt);
         }
         LoxValue::Void
       },
@@ -68,11 +42,32 @@ impl Interpreter {
       },
       Stmt::WhileStmt { cond, body } => {
         while is_truthy(self.evaluate(cond.clone())) {
-          self.execute_stmt(*body.clone());
+          self.execute(*body.clone());
         }
 
         LoxValue::Void
       },
+      Stmt::VarDecl { ident, exp } => {
+        let val: LoxValue = match exp {
+          Some(exp) => self.evaluate(exp),
+          None => LoxValue::Nil,
+        };
+
+        self.values.insert(ident, val);
+        LoxValue::Void
+      },
+      // Stmt::ForStmt { .. } => panic!("Should be desugared away"),
+    }
+  }
+
+  fn val_from_lit(&self, lit: Literal) -> LoxValue {
+    match lit {
+      Literal::Num(n) => LoxValue::Number(n),
+      Literal::String(s) => LoxValue::String(s),
+      Literal::True => LoxValue::Boolean(true),
+      Literal::False => LoxValue::Boolean(false),
+      Literal::Nil => LoxValue::Nil,
+      Literal::Identifier(ident) => self.values.get(&ident).expect("Fetching variable").clone(),
     }
   }
 

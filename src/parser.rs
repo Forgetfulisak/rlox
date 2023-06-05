@@ -5,13 +5,11 @@ use anyhow::anyhow;
 // struct program(Vec<Stmt>)
 
 #[derive(Debug, Clone)]
-pub enum Decl {
-  VarDecl { ident: String, exp: Option<Expression> },
-  Stmt(Stmt),
-}
-
-#[derive(Debug, Clone)]
 pub enum Stmt {
+  VarDecl {
+    ident: String,
+    exp: Option<Expression>,
+  },
   ExprStmt(Box<Expression>),
   IfStmt {
     cond: Expression,
@@ -23,7 +21,13 @@ pub enum Stmt {
     cond: Expression,
     body: Box<Stmt>,
   },
-  Block(Vec<Decl>),
+  // ForStmt {
+  //   init: Option<Box<Stmt>>,
+  //   cond: Option<Expression>,
+  //   inc: Option<Expression>,
+  //   body: Box<Stmt>,
+  // },
+  Block(Vec<Stmt>),
 }
 
 #[derive(Debug, Clone)]
@@ -114,14 +118,14 @@ impl Parser {
     Parser { tokens, current: 0 }
   }
 
-  pub fn parse(&mut self) -> Result<Vec<Decl>> {
-    let mut decls: Vec<Decl> = vec![];
+  pub fn parse(&mut self) -> Result<Vec<Stmt>> {
+    let mut stmts: Vec<Stmt> = vec![];
     while !self.is_at_end() {
-      decls.push(self.declaration()?)
+      stmts.push(self.declaration()?)
     }
     // let exp = self.expression()?;
     // dbg!(self.tokens.len(), self.current);
-    Ok(decls)
+    Ok(stmts)
   }
 
   fn is_at_end(&self) -> bool {
@@ -144,6 +148,10 @@ impl Parser {
     self.tokens.get(self.current).unwrap_or(&Token::Eof).clone()
   }
 
+  fn check(&self, tok: Token) -> bool {
+    std::mem::discriminant(&self.peek()) == std::mem::discriminant(&tok)
+  }
+
   fn matchn(&mut self, toks: Vec<Token>) -> bool {
     toks.iter().any(|t| self.match1(t.clone()))
   }
@@ -157,7 +165,7 @@ impl Parser {
   }
 
   fn match1(&mut self, a: Token) -> bool {
-    if std::mem::discriminant(&self.peek()) == std::mem::discriminant(&a) {
+    if self.check(a) {
       self.advance();
       return true;
     }
@@ -170,12 +178,12 @@ impl Parser {
     self.tokens[self.current - 1].clone()
   }
 
-  fn declaration(&mut self) -> Result<Decl> {
+  fn declaration(&mut self) -> Result<Stmt> {
     if self.match1(Token::Var) {
       Ok(self.var_declaration()?)
     } else {
       let stmt = self.statement()?;
-      Ok(Decl::Stmt(stmt))
+      Ok(stmt)
     }
 
     // match decl {
@@ -184,7 +192,7 @@ impl Parser {
     // }
   }
 
-  fn var_declaration(&mut self) -> Result<Decl> {
+  fn var_declaration(&mut self) -> Result<Stmt> {
     // let name = self.advance();
     if let Token::Identifier(ident) = self.advance() {
       let exp = if self.match1(Token::Equal) {
@@ -199,7 +207,7 @@ impl Parser {
         Err(anyhow!("Expected ; after value"))?
       }
 
-      return Ok(Decl::VarDecl { ident, exp });
+      return Ok(Stmt::VarDecl { ident, exp });
     }
 
     Err(anyhow!("Expected identified after var"))
@@ -214,6 +222,8 @@ impl Parser {
       self.block_statement()
     } else if self.match1(Token::While) {
       self.while_statement()
+    } else if self.match1(Token::For) {
+      self.for_statement()
     } else {
       self.expression_statment()
     }
@@ -251,6 +261,58 @@ impl Parser {
       if_stmt: stmt,
       else_stmt,
     })
+  }
+
+  fn for_statement(&mut self) -> Result<Stmt> {
+    if !self.match1(Token::LeftParen) {
+      Err(anyhow!("Expect ( after for"))?;
+    }
+
+    let init = if self.match1(Token::Semicolon) {
+      None
+    } else if self.match1(Token::Var) {
+      Some(self.var_declaration()?)
+    } else {
+      Some(self.expression_statment()?)
+    };
+
+    let cond = if !self.check(Token::Semicolon) {
+      Some(self.expression()?)
+    } else {
+      None
+    };
+
+    if !self.match1(Token::Semicolon) {
+      Err(anyhow!("Expected ; for-loop-condition"))?
+    }
+
+    let inc = if !self.check(Token::RightParen) {
+      Some(self.expression()?)
+    } else {
+      None
+    };
+
+    if !self.match1(Token::RightParen) {
+      Err(anyhow!("Expected ) after for clauses"))?
+    }
+
+    let mut body = self.statement()?;
+
+    if let Some(inc) = inc {
+      body = Stmt::Block(vec![body, Stmt::ExprStmt(Box::new(inc))]);
+    }
+
+    let cond = cond.unwrap_or_else(|| Expression::Literal(Literal::True));
+    body = Stmt::WhileStmt {
+      cond,
+      body: Box::new(body),
+    };
+
+    if let Some(init) = init {
+      body = Stmt::Block(vec![init, body]);
+    }
+
+    Ok(body)
   }
 
   fn while_statement(&mut self) -> Result<Stmt> {
