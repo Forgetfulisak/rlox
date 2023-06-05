@@ -26,6 +26,11 @@ pub enum Expression {
     op: UnaryOp,
     exp: Box<Expression>,
   },
+  Assignment {
+    // And now the cracks are starting to show
+    ident: String,
+    value: Box<Expression>,
+  },
 }
 
 #[derive(Debug, Clone)]
@@ -211,7 +216,26 @@ impl Parser {
   }
 
   fn expression(&mut self) -> Result<Expression> {
-    return self.equality();
+    return self.assignment();
+  }
+
+  fn assignment(&mut self) -> Result<Expression> {
+    let exp = self.equality()?;
+
+    if self.match1(Token::Equal) {
+      let value = self.assignment()?;
+
+      if let Expression::Literal(Literal::Identifier(ident)) = exp {
+        return Ok(Expression::Assignment {
+          ident,
+          value: Box::new(value),
+        });
+      } else {
+        Err(anyhow!("Invalid assignment target"))?;
+      }
+    }
+
+    return Ok(exp);
   }
 
   fn equality(&mut self) -> Result<Expression> {

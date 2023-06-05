@@ -89,6 +89,15 @@ impl Interpreter {
         },
         (UnaryOp::Bang, exp) => LoxValue::Boolean(!is_truthy(self.evaluate(exp))),
       },
+      Expression::Assignment { ident, value } => {
+        let val = self.evaluate(*value);
+        if self.values.contains_key(&ident) {
+          self.values.insert(ident, val.clone());
+          return val;
+        }
+
+        panic!("Undefined variable")
+      },
     }
   }
 }
