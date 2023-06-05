@@ -42,10 +42,28 @@ impl Interpreter {
 
   pub fn execute_stmt(&mut self, stmt: Stmt) -> LoxValue {
     match stmt {
-      Stmt::ExprSttmt(exp) => self.evaluate(*exp),
+      Stmt::ExprStmt(exp) => self.evaluate(*exp),
       Stmt::PrintStmt(exp) => {
         let val = self.evaluate(*exp);
         println!("{}", val);
+        LoxValue::Void
+      },
+      Stmt::IfStmt {
+        cond,
+        if_stmt,
+        else_stmt,
+      } => {
+        if is_truthy(self.evaluate(cond)) {
+          self.execute_stmt(*if_stmt);
+        } else if let Some(stmt) = else_stmt {
+          self.execute_stmt(*stmt);
+        }
+        LoxValue::Void
+      },
+      Stmt::Block(decls) => {
+        for decl in decls {
+          self.execute(decl);
+        }
         LoxValue::Void
       },
     }

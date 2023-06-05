@@ -4,14 +4,22 @@ use anyhow::anyhow;
 
 // struct program(Vec<Stmt>)
 
+#[derive(Debug, Clone)]
 pub enum Decl {
   VarDecl { ident: String, exp: Option<Expression> },
   Stmt(Stmt),
 }
 
+#[derive(Debug, Clone)]
 pub enum Stmt {
-  ExprSttmt(Box<Expression>),
+  ExprStmt(Box<Expression>),
   PrintStmt(Box<Expression>),
+  IfStmt {
+    cond: Expression,
+    if_stmt: Box<Stmt>,
+    else_stmt: Option<Box<Stmt>>,
+  },
+  Block(Vec<Decl>),
 }
 
 #[derive(Debug, Clone)]
@@ -189,9 +197,47 @@ impl Parser {
   fn statement(&mut self) -> Result<Stmt> {
     if self.match1(Token::Print) {
       self.print_statement()
+    } else if self.match1(Token::If) {
+      self.if_statement()
+    } else if self.match1(Token::LeftBrace) {
+      self.block_statement()
     } else {
       self.expression_statment()
     }
+  }
+
+  fn block_statement(&mut self) -> Result<Stmt> {
+    let mut decls = vec![];
+    while !self.match1(Token::RightBrace) {
+      decls.push(self.declaration()?);
+    }
+
+    Ok(Stmt::Block(decls))
+  }
+
+  fn if_statement(&mut self) -> Result<Stmt> {
+    if !self.match1(Token::LeftParen) {
+      Err(anyhow!("Expected ( in if-test"))?
+    }
+
+    let cond = self.expression()?;
+
+    if !self.match1(Token::RightParen) {
+      Err(anyhow!("Expected ) after expression in if-test"))?
+    }
+    let stmt = Box::new(self.statement()?);
+
+    let else_stmt = if self.match1(Token::Else) {
+      Some(Box::new(self.statement()?))
+    } else {
+      None
+    };
+
+    Ok(Stmt::IfStmt {
+      cond,
+      if_stmt: stmt,
+      else_stmt,
+    })
   }
 
   fn print_statement(&mut self) -> Result<Stmt> {
@@ -212,7 +258,7 @@ impl Parser {
       Err(anyhow!("Expected ; after value"))?
     }
 
-    Ok(Stmt::ExprSttmt(Box::new(exp)))
+    Ok(Stmt::ExprStmt(Box::new(exp)))
   }
 
   fn expression(&mut self) -> Result<Expression> {
