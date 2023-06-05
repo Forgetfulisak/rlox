@@ -4,6 +4,11 @@ use anyhow::anyhow;
 
 // struct program(Vec<Stmt>)
 
+pub enum Decl {
+  VarDecl { ident: String, exp: Option<Expression> },
+  Stmt(Stmt),
+}
+
 pub enum Stmt {
   ExprSttmt(Box<Expression>),
   PrintStmt(Box<Expression>),
@@ -30,6 +35,7 @@ pub enum Literal {
   True,
   False,
   Nil,
+  Identifier(String), // Kinda messy cause my `Literal` is their `primary`
 }
 
 #[derive(Debug, Clone)]
@@ -84,14 +90,14 @@ impl Parser {
     Parser { tokens, current: 0 }
   }
 
-  pub fn parse(&mut self) -> Result<Vec<Stmt>> {
-    let mut statements: Vec<Stmt> = vec![];
+  pub fn parse(&mut self) -> Result<Vec<Decl>> {
+    let mut decls: Vec<Decl> = vec![];
     while !self.is_at_end() {
-      statements.push(self.statement()?)
+      decls.push(self.declaration()?)
     }
     // let exp = self.expression()?;
     // dbg!(self.tokens.len(), self.current);
-    Ok(statements)
+    Ok(decls)
   }
 
   fn is_at_end(&self) -> bool {
@@ -138,6 +144,41 @@ impl Parser {
 
   fn previous(&mut self) -> Token {
     self.tokens[self.current - 1].clone()
+  }
+
+  fn declaration(&mut self) -> Result<Decl> {
+    if self.match1(Token::Var) {
+      Ok(self.var_declaration()?)
+    } else {
+      let stmt = self.statement()?;
+      Ok(Decl::Stmt(stmt))
+    }
+
+    // match decl {
+    //   Ok(decl) => Some(decl),
+    //   Err(_) => None,
+    // }
+  }
+
+  fn var_declaration(&mut self) -> Result<Decl> {
+    // let name = self.advance();
+    if let Token::Identifier(ident) = self.advance() {
+      let exp = if self.match1(Token::Equal) {
+        Some(self.expression()?)
+      } else {
+        None
+      };
+
+      let semicolon = self.advance();
+      if let Token::Semicolon = semicolon {
+      } else {
+        Err(anyhow!("Expected ; after value"))?
+      }
+
+      return Ok(Decl::VarDecl { ident, exp });
+    }
+
+    Err(anyhow!("Expected identified after var"))
   }
 
   fn statement(&mut self) -> Result<Stmt> {
@@ -279,6 +320,7 @@ impl Parser {
       Token::Nil => Ok(Expression::Literal(Literal::Nil)),
       Token::True => Ok(Expression::Literal(Literal::True)),
       Token::False => Ok(Expression::Literal(Literal::False)),
+      Token::Identifier(s) => Ok(Expression::Literal(Literal::Identifier(s))),
       tok => Err(anyhow!("invalid token: {:?}", tok)),
     }?;
 

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::Chars};
+use std::str::Chars;
 
 use crate::error::Result;
 use anyhow::{anyhow, Context};
@@ -80,7 +80,7 @@ pub struct Scanner<'a> {
   source: String,
   chars: Chars<'a>,
   current: usize,
-  line: usize,
+  // line: usize,
   start: usize,
 }
 
@@ -89,7 +89,7 @@ impl<'a> Scanner<'a> {
     Scanner {
       source: source.to_string(),
       chars: source.chars(),
-      line: 1,
+      // line: 1,
       start: 0,
       current: 0,
     }

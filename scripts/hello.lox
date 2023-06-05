@@ -1,4 +1,7 @@
-print "hei";
-print 1+2;
-print 42/2;
-print "hei";
+
+var a = 10;
+var b = 20;
+
+print a + b;
+
+print "it is doing stuffs!";

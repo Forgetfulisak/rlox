@@ -3,26 +3,29 @@ mod interpreter;
 mod parser;
 mod scanner;
 
-use interpreter::interpreter;
+use interpreter::Interpreter;
 
-use crate::{error::Result, interpreter::evaluate, scanner::Scanner};
+use crate::{error::Result, scanner::Scanner};
 
 use std::{
+  collections::HashMap,
   env, fs,
   io::{stdin, stdout, Write},
 };
 
-fn run(source: String) -> Result<()> {
+fn run(source: String, interpreter: &mut Interpreter) -> Result<()> {
   let mut scanner = Scanner::new(source.as_str());
   let tokens = scanner.scan_tokens().unwrap();
   // dbg!(&tokens);
   let mut parser = parser::Parser::new(tokens);
   let res = parser.parse()?;
-  interpreter(res);
+  interpreter.interpret(res);
   Ok(())
 }
 
 fn run_prompt() -> Result<()> {
+  let mut interpreter = Interpreter { values: HashMap::new() };
+
   let sin = stdin();
   let mut sout = stdout();
   loop {
@@ -37,7 +40,7 @@ fn run_prompt() -> Result<()> {
       break;
     }
 
-    let res = run(line);
+    let res = run(line, &mut interpreter);
     match res {
       Ok(_) => (),
       Err(err) => {
@@ -51,7 +54,8 @@ fn run_prompt() -> Result<()> {
 
 fn run_file(file: String) -> Result<()> {
   let source = fs::read_to_string(file)?;
-  run(source)?;
+  let mut interpreter = Interpreter { values: HashMap::new() };
+  run(source, &mut interpreter)?;
   Ok(())
 }
 
