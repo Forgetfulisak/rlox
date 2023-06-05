@@ -3,7 +3,9 @@ mod interpreter;
 mod parser;
 mod scanner;
 
-use crate::{error::Result, scanner::Scanner};
+use interpreter::interpreter;
+
+use crate::{error::Result, interpreter::evaluate, scanner::Scanner};
 
 use std::{
   env, fs,
@@ -13,10 +15,10 @@ use std::{
 fn run(source: String) -> Result<()> {
   let mut scanner = Scanner::new(source.as_str());
   let tokens = scanner.scan_tokens().unwrap();
-  dbg!(&tokens);
+  // dbg!(&tokens);
   let mut parser = parser::Parser::new(tokens);
   let res = parser.parse()?;
-  dbg!(res);
+  interpreter(res);
   Ok(())
 }
 

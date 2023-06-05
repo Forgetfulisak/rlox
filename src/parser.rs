@@ -88,7 +88,6 @@ pub enum Expression {
     op: UnaryOp,
     exp: Box<Expression>,
   },
-  Grouping(Box<Expression>),
 }
 
 #[derive(Debug, Clone)]
@@ -250,11 +249,8 @@ impl Parser {
   }
   fn factor(&mut self) -> Result<Expression> {
     let mut exp = self.unary()?;
-    dbg!("Factor got unary");
-    dbg!(&self.peek());
     while self.match2(Token::Slash, Token::Star) {
       let op = self.previous();
-      dbg!("Factor got match");
 
       exp = Expression::Binary {
         exp1: Box::new(exp),

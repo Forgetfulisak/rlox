@@ -99,7 +99,7 @@ impl<'a> Scanner<'a> {
     let mut tokens: Vec<Token> = vec![];
     let mut errs: Vec<anyhow::Error> = vec![];
 
-    dbg!(self.chars.clone().collect::<String>());
+    // dbg!(self.chars.clone().collect::<String>());
 
     while !self.is_at_end() {
       self.start = self.current;
