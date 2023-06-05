@@ -98,6 +98,8 @@ impl Interpreter {
 
           (Operator::Slash, LoxValue::Number(n1), LoxValue::Number(n2)) => LoxValue::Number(n1 / n2),
           (Operator::Slash, _v1, _v2) => panic!("wrong type for Slash"),
+          (Operator::And, _, _) => panic!("Parse error, unexpected AND"),
+          (Operator::Or, _, _) => panic!("Parse error, unexpected OR"),
         }
       },
       Expression::Unary { op, exp } => match (op, *exp) {
@@ -115,6 +117,20 @@ impl Interpreter {
         }
 
         panic!("Undefined variable")
+      },
+      Expression::Logic { and1, op, and2 } => {
+        let val1 = self.evaluate(*and1);
+
+        if matches!(op, Operator::Or) {
+          if is_truthy(val1.clone()) {
+            return val1;
+          }
+        } else {
+          if !is_truthy(val1.clone()) {
+            return val1;
+          }
+        }
+        self.evaluate(*and2)
       },
     }
   }

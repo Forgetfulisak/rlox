@@ -39,7 +39,22 @@ pub enum Expression {
     ident: String,
     value: Box<Expression>,
   },
+  Logic {
+    and1: Box<Expression>,
+    op: Operator,
+    and2: Box<Expression>,
+  },
 }
+
+// #[derive(Debug, Clone)]
+// pub enum Logic {
+//   Unary(Box<Expression>),
+//   Binary {
+//     and1: Box<Expression>,
+//     op: Operator,
+//     and2: Box<Expression>,
+//   },
+// }
 
 #[derive(Debug, Clone)]
 pub enum Literal {
@@ -63,6 +78,8 @@ pub enum Operator {
   Minus,
   Star,
   Slash,
+  Or,
+  And,
 }
 
 impl TryFrom<Token> for Operator {
@@ -74,9 +91,9 @@ impl TryFrom<Token> for Operator {
       Token::Plus => Ok(Operator::Plus),
       Token::Slash => Ok(Operator::Slash),
       Token::Star => Ok(Operator::Star),
-      // Token::Bang => Ok(Operator::Bang),
       Token::BangEqual => Ok(Operator::BangEqual),
-      // Token::Equal => Ok(Operator::Equal),
+      Token::Or => Ok(Operator::Or),
+      Token::And => Ok(Operator::And),
       Token::EqualEqual => Ok(Operator::EqualEqual),
       Token::Greater => Ok(Operator::Greater),
       Token::GreaterEqual => Ok(Operator::GreaterEqual),
@@ -266,7 +283,7 @@ impl Parser {
   }
 
   fn assignment(&mut self) -> Result<Expression> {
-    let exp = self.equality()?;
+    let exp = self.or()?;
 
     if self.match1(Token::Equal) {
       let value = self.assignment()?;
@@ -282,6 +299,36 @@ impl Parser {
     }
 
     return Ok(exp);
+  }
+
+  fn or(&mut self) -> Result<Expression> {
+    let mut exp = self.and()?;
+
+    while self.match1(Token::Or) {
+      let op = self.previous();
+      exp = Expression::Logic {
+        and1: Box::new(exp),
+        op: op.try_into()?,
+        and2: Box::new(self.and()?),
+      }
+    }
+
+    Ok(exp)
+  }
+
+  fn and(&mut self) -> Result<Expression> {
+    let mut exp = self.equality()?;
+
+    while self.match1(Token::And) {
+      let op = self.previous();
+      exp = Expression::Logic {
+        and1: Box::new(exp),
+        op: op.try_into()?,
+        and2: Box::new(self.equality()?),
+      }
+    }
+
+    Ok(exp)
   }
 
   fn equality(&mut self) -> Result<Expression> {
