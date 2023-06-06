@@ -1,0 +1,16 @@
+
+for (var a = 1; a <= 30; a = a + 1) {
+
+    var b1 = a % 3;
+    var b2 = a % 5;
+
+    if ((b1 == 0) and (b2 == 0)) {
+        print "fizzbuzz";
+    } else if (b1 == 0) {
+        print "fizz";
+    } else if (b2 == 0) {
+        print "buzz";
+    } else {
+        print a;
+    }
+}

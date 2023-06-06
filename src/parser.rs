@@ -78,6 +78,7 @@ pub enum Operator {
   Slash,
   Or,
   And,
+  Mod,
 }
 
 impl TryFrom<Token> for Operator {
@@ -89,6 +90,7 @@ impl TryFrom<Token> for Operator {
       Token::Plus => Ok(Operator::Plus),
       Token::Slash => Ok(Operator::Slash),
       Token::Star => Ok(Operator::Star),
+      Token::Mod => Ok(Operator::Mod),
       Token::BangEqual => Ok(Operator::BangEqual),
       Token::Or => Ok(Operator::Or),
       Token::And => Ok(Operator::And),
@@ -455,7 +457,7 @@ impl Parser {
   }
   fn factor(&mut self) -> Result<Expression> {
     let mut exp = self.unary()?;
-    while self.match2(Token::Slash, Token::Star) {
+    while self.matchn(vec![Token::Slash, Token::Star, Token::Mod]) {
       let op = self.previous();
 
       exp = Expression::Binary {

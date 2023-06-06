@@ -71,6 +71,7 @@ pub enum Token {
   True,
   Var,
   While,
+  Mod,
 
   Eof,
 }
@@ -220,6 +221,7 @@ impl<'a> Scanner<'a> {
       '+' => Some(Token::Plus),
       ';' => Some(Token::Semicolon),
       '*' => Some(Token::Star),
+      '%' => Some(Token::Mod),
       '!' => {
         if self.match_next('=') {
           Some(Token::BangEqual)

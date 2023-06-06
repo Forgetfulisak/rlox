@@ -100,6 +100,10 @@ impl Interpreter {
 
           (Operator::Slash, LoxValue::Number(n1), LoxValue::Number(n2)) => LoxValue::Number(n1 / n2),
           (Operator::Slash, _v1, _v2) => panic!("wrong type for Slash"),
+
+          (Operator::Mod, LoxValue::Number(n1), LoxValue::Number(n2)) => LoxValue::Number(n1 % n2),
+          (Operator::Mod, _v1, _v2) => panic!("wrong type for Slash"),
+
           (Operator::And, _, _) => panic!("Parse error, unexpected AND"),
           (Operator::Or, _, _) => panic!("Parse error, unexpected OR"),
         }
