@@ -1,14 +1,15 @@
+mod environ;
 mod error;
 mod interpreter;
 mod parser;
 mod scanner;
 
+use environ::Environ;
 use interpreter::Interpreter;
 
 use crate::{error::Result, scanner::Scanner};
 
 use std::{
-  collections::HashMap,
   env, fs,
   io::{stdin, stdout, Write},
 };
@@ -24,7 +25,9 @@ fn run(source: String, interpreter: &mut Interpreter) -> Result<()> {
 }
 
 fn run_prompt() -> Result<()> {
-  let mut interpreter = Interpreter { values: HashMap::new() };
+  let mut interpreter = Interpreter {
+    env: Environ::new(None),
+  };
 
   let sin = stdin();
   let mut sout = stdout();
@@ -53,7 +56,9 @@ fn run_prompt() -> Result<()> {
 
 fn run_file(file: String) -> Result<()> {
   let source = fs::read_to_string(file)?;
-  let mut interpreter = Interpreter { values: HashMap::new() };
+  let mut interpreter = Interpreter {
+    env: Environ::new(None),
+  };
   run(source, &mut interpreter)?;
   Ok(())
 }

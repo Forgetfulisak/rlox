@@ -1,0 +1,13 @@
+
+
+var a = 2;
+
+{
+    var b = 10;
+    a = 20;
+    b = 30;
+    print b;
+
+}
+
+print a;

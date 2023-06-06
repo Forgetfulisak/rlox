@@ -1,10 +1,10 @@
-use std::collections::{hash_map::Entry, HashMap};
 use std::fmt::Display;
 
+use crate::environ::Environ;
 use crate::parser::{Expression, Literal, Operator, Stmt, UnaryOp};
 
 pub struct Interpreter {
-  pub values: HashMap<String, LoxValue>,
+  pub env: Environ,
 }
 
 impl Interpreter {
@@ -35,9 +35,13 @@ impl Interpreter {
         LoxValue::Void
       },
       Stmt::Block(decls) => {
+        let prev = std::mem::take(&mut self.env);
+        self.env = Environ::new(Some(Box::new(prev)));
         for decl in decls {
           self.execute(decl);
         }
+        // Good lord...
+        self.env = *std::mem::take(&mut self.env.enclosing).unwrap();
         LoxValue::Void
       },
       Stmt::While { cond, body } => {
@@ -53,7 +57,7 @@ impl Interpreter {
           None => LoxValue::Nil,
         };
 
-        self.values.insert(ident, val);
+        self.env.define(ident, val);
         LoxValue::Void
       },
       // Stmt::ForStmt { .. } => panic!("Should be desugared away"),
@@ -67,7 +71,7 @@ impl Interpreter {
       Literal::True => LoxValue::Boolean(true),
       Literal::False => LoxValue::Boolean(false),
       Literal::Nil => LoxValue::Nil,
-      Literal::Identifier(ident) => self.values.get(&ident).expect("Fetching variable").clone(),
+      Literal::Identifier(ident) => self.env.get(ident),
     }
   }
 
@@ -117,12 +121,9 @@ impl Interpreter {
       },
       Expression::Assignment { ident, value } => {
         let val = self.evaluate(*value);
-        if let Entry::Occupied(mut e) = self.values.entry(ident) {
-          e.insert(val.clone());
-          return val;
-        }
+        self.env.assign(ident, val);
 
-        panic!("Undefined variable")
+        LoxValue::Void
       },
       Expression::Logic { and1, op, and2 } => {
         let val1 = self.evaluate(*and1);

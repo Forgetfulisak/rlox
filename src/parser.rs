@@ -214,8 +214,12 @@ impl Parser {
 
   fn block_statement(&mut self) -> Result<Stmt> {
     let mut decls = vec![];
-    while !self.match1(Token::RightBrace) {
+    while !self.check(Token::RightBrace) && !self.is_at_end() {
       decls.push(self.declaration()?);
+    }
+
+    if !self.match1(Token::RightBrace) {
+      Err(anyhow!("Expected }} after block"))?
     }
 
     Ok(Stmt::Block(decls))
