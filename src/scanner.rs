@@ -122,7 +122,7 @@ impl<'a> Scanner<'a> {
   }
 
   fn is_at_end(&self) -> bool {
-    self.chars.clone().as_str().len() == 0
+    self.chars.clone().as_str().is_empty()
   }
 
   fn advance(&mut self) -> Option<char> {
@@ -165,7 +165,8 @@ impl<'a> Scanner<'a> {
   }
 
   fn is_digit(&self, c: char) -> bool {
-    c >= '0' && c <= '9'
+    // c >= '0' && c <= '9'
+    c.is_ascii_digit()
   }
 
   fn sub_string(&self, start: usize, end: usize) -> String {

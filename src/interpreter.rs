@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 use std::fmt::Display;
 
 use crate::parser::{Expression, Literal, Operator, Stmt, UnaryOp};
@@ -16,8 +16,8 @@ impl Interpreter {
 
   pub fn execute(&mut self, stmt: Stmt) -> LoxValue {
     match stmt {
-      Stmt::ExprStmt(exp) => self.evaluate(*exp),
-      Stmt::PrintStmt(exp) => {
+      Stmt::Expr(exp) => self.evaluate(*exp),
+      Stmt::Print(exp) => {
         let val = self.evaluate(*exp);
         println!("{}", val);
         LoxValue::Void
@@ -40,7 +40,7 @@ impl Interpreter {
         }
         LoxValue::Void
       },
-      Stmt::WhileStmt { cond, body } => {
+      Stmt::While { cond, body } => {
         while is_truthy(self.evaluate(cond.clone())) {
           self.execute(*body.clone());
         }
@@ -117,8 +117,8 @@ impl Interpreter {
       },
       Expression::Assignment { ident, value } => {
         let val = self.evaluate(*value);
-        if self.values.contains_key(&ident) {
-          self.values.insert(ident, val.clone());
+        if let Entry::Occupied(mut e) = self.values.entry(ident) {
+          e.insert(val.clone());
           return val;
         }
 
@@ -131,10 +131,8 @@ impl Interpreter {
           if is_truthy(val1.clone()) {
             return val1;
           }
-        } else {
-          if !is_truthy(val1.clone()) {
-            return val1;
-          }
+        } else if !is_truthy(val1.clone()) {
+          return val1;
         }
         self.evaluate(*and2)
       },

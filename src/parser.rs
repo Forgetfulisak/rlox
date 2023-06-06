@@ -10,14 +10,14 @@ pub enum Stmt {
     ident: String,
     exp: Option<Expression>,
   },
-  ExprStmt(Box<Expression>),
+  Expr(Box<Expression>),
   IfStmt {
     cond: Expression,
     if_stmt: Box<Stmt>,
     else_stmt: Option<Box<Stmt>>,
   },
-  PrintStmt(Box<Expression>),
-  WhileStmt {
+  Print(Box<Expression>),
+  While {
     cond: Expression,
     body: Box<Stmt>,
   },
@@ -125,12 +125,7 @@ impl Parser {
   }
 
   fn is_at_end(&self) -> bool {
-    if let Token::Eof = self.peek() {
-      true
-    } else {
-      false
-    }
-    // self.current >= self.tokens.len()
+    matches!(self.peek(), Token::Eof)
   }
 
   fn advance(&mut self) -> Token {
@@ -287,11 +282,11 @@ impl Parser {
     let mut body = self.statement()?;
 
     if let Some(inc) = inc {
-      body = Stmt::Block(vec![body, Stmt::ExprStmt(Box::new(inc))]);
+      body = Stmt::Block(vec![body, Stmt::Expr(Box::new(inc))]);
     }
 
     let cond = cond.unwrap_or_else(|| Expression::Literal(Literal::True));
-    body = Stmt::WhileStmt {
+    body = Stmt::While {
       cond,
       body: Box::new(body),
     };
@@ -316,7 +311,7 @@ impl Parser {
 
     let stmt = Box::new(self.statement()?);
 
-    Ok(Stmt::WhileStmt { cond, body: stmt })
+    Ok(Stmt::While { cond, body: stmt })
   }
 
   fn print_statement(&mut self) -> Result<Stmt> {
@@ -327,7 +322,7 @@ impl Parser {
       Err(anyhow!("Expected ; after value"))?
     }
 
-    Ok(Stmt::PrintStmt(Box::new(exp)))
+    Ok(Stmt::Print(Box::new(exp)))
   }
   fn expression_statment(&mut self) -> Result<Stmt> {
     let exp = self.expression()?;
@@ -337,11 +332,11 @@ impl Parser {
       Err(anyhow!("Expected ; after value"))?
     }
 
-    Ok(Stmt::ExprStmt(Box::new(exp)))
+    Ok(Stmt::Expr(Box::new(exp)))
   }
 
   fn expression(&mut self) -> Result<Expression> {
-    return self.assignment();
+    self.assignment()
   }
 
   fn assignment(&mut self) -> Result<Expression> {
@@ -360,7 +355,7 @@ impl Parser {
       }
     }
 
-    return Ok(exp);
+    Ok(exp)
   }
 
   fn or(&mut self) -> Result<Expression> {
