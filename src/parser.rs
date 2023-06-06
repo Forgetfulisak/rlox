@@ -21,12 +21,6 @@ pub enum Stmt {
     cond: Expression,
     body: Box<Stmt>,
   },
-  // ForStmt {
-  //   init: Option<Box<Stmt>>,
-  //   cond: Option<Expression>,
-  //   inc: Option<Expression>,
-  //   body: Box<Stmt>,
-  // },
   Block(Vec<Stmt>),
 }
 
@@ -156,14 +150,6 @@ impl Parser {
 
   fn matchn(&mut self, toks: Vec<Token>) -> bool {
     toks.iter().any(|t| self.match1(t.clone()))
-  }
-
-  fn match2(&mut self, a: Token, b: Token) -> bool {
-    if self.match1(a) || self.match1(b) {
-      return true;
-    }
-
-    false
   }
 
   fn match1(&mut self, a: Token) -> bool {

@@ -45,7 +45,6 @@ fn run_prompt() -> Result<()> {
       Ok(_) => (),
       Err(err) => {
         dbg!(err);
-        ()
       },
     };
   }

@@ -156,9 +156,9 @@ impl Display for LoxValue {
     match self {
       // LoxValue::Value => f.write_str("Value"),
       LoxValue::Nil => f.write_str("Nil"),
-      LoxValue::Boolean(b) => f.write_str(&format!("{}", b)),
-      LoxValue::Number(n) => f.write_str(&format!("{}", n)),
-      LoxValue::String(s) => f.write_str(&format!("{}", s)),
+      LoxValue::Boolean(b) => f.write_str(&b.to_string()),
+      LoxValue::Number(n) => f.write_str(&n.to_string()),
+      LoxValue::String(s) => f.write_str(&s.to_string()),
       LoxValue::Void => f.write_str("Void"),
     }
   }
