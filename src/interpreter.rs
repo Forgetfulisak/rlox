@@ -16,9 +16,9 @@ impl Interpreter {
 
   pub fn execute(&mut self, stmt: Stmt) -> LoxValue {
     match stmt {
-      Stmt::Expr(exp) => self.evaluate(*exp),
+      Stmt::Expr(exp) => self.evaluate(exp),
       Stmt::Print(exp) => {
-        let val = self.evaluate(*exp);
+        let val = self.evaluate(exp);
         println!("{}", val);
         LoxValue::Void
       },

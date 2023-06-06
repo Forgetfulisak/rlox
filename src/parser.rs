@@ -10,13 +10,13 @@ pub enum Stmt {
     ident: String,
     exp: Option<Expression>,
   },
-  Expr(Box<Expression>),
+  Expr(Expression),
   IfStmt {
     cond: Expression,
     if_stmt: Box<Stmt>,
     else_stmt: Option<Box<Stmt>>,
   },
-  Print(Box<Expression>),
+  Print(Expression),
   While {
     cond: Expression,
     body: Box<Stmt>,
@@ -282,7 +282,7 @@ impl Parser {
     let mut body = self.statement()?;
 
     if let Some(inc) = inc {
-      body = Stmt::Block(vec![body, Stmt::Expr(Box::new(inc))]);
+      body = Stmt::Block(vec![body, Stmt::Expr(inc)]);
     }
 
     let cond = cond.unwrap_or_else(|| Expression::Literal(Literal::True));
@@ -322,7 +322,7 @@ impl Parser {
       Err(anyhow!("Expected ; after value"))?
     }
 
-    Ok(Stmt::Print(Box::new(exp)))
+    Ok(Stmt::Print(exp))
   }
   fn expression_statment(&mut self) -> Result<Stmt> {
     let exp = self.expression()?;
@@ -332,7 +332,7 @@ impl Parser {
       Err(anyhow!("Expected ; after value"))?
     }
 
-    Ok(Stmt::Expr(Box::new(exp)))
+    Ok(Stmt::Expr(exp))
   }
 
   fn expression(&mut self) -> Result<Expression> {
