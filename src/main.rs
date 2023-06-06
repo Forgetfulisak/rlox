@@ -25,9 +25,7 @@ fn run(source: String, interpreter: &mut Interpreter) -> Result<()> {
 }
 
 fn run_prompt() -> Result<()> {
-  let mut interpreter = Interpreter {
-    env: Environ::new(None),
-  };
+  let mut interpreter = Interpreter::new();
 
   let sin = stdin();
   let mut sout = stdout();
@@ -56,9 +54,7 @@ fn run_prompt() -> Result<()> {
 
 fn run_file(file: String) -> Result<()> {
   let source = fs::read_to_string(file)?;
-  let mut interpreter = Interpreter {
-    env: Environ::new(None),
-  };
+  let mut interpreter = Interpreter::new();
   run(source, &mut interpreter)?;
   Ok(())
 }

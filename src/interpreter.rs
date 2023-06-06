@@ -1,4 +1,7 @@
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use anyhow::anyhow;
 
 use crate::environ::Environ;
 use crate::parser::{Expression, Literal, Operator, Stmt, UnaryOp};
@@ -8,6 +11,18 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
+  pub fn new() -> Self {
+    let mut inter = Interpreter {
+      env: Environ::new(None),
+    };
+
+    inter
+      .env
+      .define("clock".to_string(), LoxValue::LoxCallable(LoxCallable::Clock));
+
+    inter
+  }
+
   pub fn interpret(&mut self, stmts: Vec<Stmt>) {
     for stmt in stmts {
       self.execute(stmt);
@@ -137,6 +152,21 @@ impl Interpreter {
         }
         self.evaluate(*and2)
       },
+      Expression::Call { callee, args } => {
+        let callee = self.evaluate(*callee);
+        let args: Vec<_> = args.into_iter().map(|arg| self.evaluate(arg)).collect();
+
+        match callee {
+          LoxValue::LoxCallable(mut fun) => {
+            if fun.arity() != args.len() {
+              panic!("Invalid number of arguments to funciton");
+            }
+
+            fun.call(self, args)
+          },
+          _ => panic!("Invalid type for call"),
+        }
+      },
     }
   }
 }
@@ -144,6 +174,7 @@ impl Interpreter {
 #[derive(Debug, Clone)]
 pub enum LoxValue {
   // Value,
+  LoxCallable(LoxCallable),
   Nil,
   Boolean(bool),
   Number(f64),
@@ -154,6 +185,7 @@ impl Display for LoxValue {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       // LoxValue::Value => f.write_str("Value"),
+      LoxValue::LoxCallable(_) => f.write_str("Fun"),
       LoxValue::Nil => f.write_str("Nil"),
       LoxValue::Boolean(b) => f.write_str(&b.to_string()),
       LoxValue::Number(n) => f.write_str(&n.to_string()),
@@ -165,7 +197,7 @@ impl Display for LoxValue {
 
 fn is_truthy(v: LoxValue) -> bool {
   match v {
-    // LoxValue::Value => true,
+    LoxValue::LoxCallable(_) => true,
     LoxValue::Nil => false,
     LoxValue::Boolean(t) => t,
     LoxValue::Number(_) => true,
@@ -197,3 +229,79 @@ fn is_less_eq(v1: LoxValue, v2: LoxValue) -> bool {
     (v1, v2) => panic!("wront types for is_less {:?}, {:?}", v1, v2),
   }
 }
+
+#[derive(Debug, Clone)]
+enum LoxCallable {
+  Clock,
+  Normal,
+}
+
+impl LoxCallable {
+  pub fn call(&mut self, interpreter: &mut Interpreter, args: Vec<LoxValue>) -> LoxValue {
+    match self {
+      LoxCallable::Clock => LoxValue::Number(
+        SystemTime::now()
+          .duration_since(UNIX_EPOCH)
+          .expect("Time goes forward")
+          .as_secs_f64(),
+      ),
+      LoxCallable::Normal => todo!(),
+    }
+  }
+
+  pub fn arity(&self) -> usize {
+    match self {
+      LoxCallable::Clock => 0,
+      LoxCallable::Normal => 0,
+    }
+  }
+}
+
+// trait LoxCallable {
+//   fn arity(&self) -> usize;
+//   fn call(&mut self, interpreter: &mut Interpreter, args: Vec<LoxValue>) -> LoxValue;
+// }
+// impl Debug for dyn LoxCallable {
+//   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//     write!(f, "LoxCallable")
+//   }
+// }
+
+// #[derive(Debug, Clone)]
+// pub struct LoxFunction {
+//   arity: usize,
+// }
+
+// impl LoxCallable for LoxFunction {
+//   fn call(&mut self, interpreter: &mut Interpreter, args: Vec<LoxValue>) -> LoxValue {
+//     todo!()
+//   }
+
+//   fn arity(&self) -> usize {
+//     todo!()
+//   }
+// }
+
+// #[derive(Debug, Clone)]
+// pub struct ClockFunction {}
+
+// impl LoxCallable for ClockFunction {
+//   fn call(&mut self, _interpreter: &mut Interpreter, _args: Vec<LoxValue>) -> LoxValue {
+//     dbg!("called clockfunction");
+//     LoxValue::Number(
+//       SystemTime::now()
+//         .duration_since(UNIX_EPOCH)
+//         .expect("Time goes forward")
+//         .as_secs_f64(),
+//     )
+//   }
+
+//   fn arity(&self) -> usize {
+//     0
+//   }
+// }
+
+/*
+|| {
+
+        } */

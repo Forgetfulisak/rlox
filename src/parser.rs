@@ -1,6 +1,6 @@
 use crate::error::Result;
 use crate::scanner::Token;
-use anyhow::anyhow;
+use anyhow::{anyhow, Ok};
 
 // struct program(Vec<Stmt>)
 
@@ -45,6 +45,10 @@ pub enum Expression {
     and1: Box<Expression>,
     op: Operator,
     and2: Box<Expression>,
+  },
+  Call {
+    callee: Box<Expression>,
+    args: Vec<Expression>,
   },
 }
 
@@ -455,6 +459,7 @@ impl Parser {
 
     Ok(exp)
   }
+
   fn unary(&mut self) -> Result<Expression> {
     let exp = match self.peek() {
       Token::Bang => {
@@ -471,13 +476,51 @@ impl Parser {
           exp: Box::new(self.unary()?),
         })
       },
-      _ => self.primary(),
+      _ => self.call(),
     }?;
     // dbg!(&exp);
     // assert!(self.match1(Token::Semicolon));
 
     Ok(exp)
   }
+
+  fn call(&mut self) -> Result<Expression> {
+    let prim = self.primary()?;
+
+    if self.match1(Token::LeftParen) {
+      let args = if !self.match1(Token::RightParen) {
+        let args = self.arguments()?;
+        if !self.match1(Token::RightParen) {
+          return Err(anyhow!("Expected ) after arguments"));
+        }
+        args
+      } else {
+        vec![]
+      };
+
+      if args.len() >= 255 {
+        // Shouldn't actually return error, just report it(?)
+        return Err(anyhow!("Can't have more than 255 arguments"));
+      }
+
+      return Ok(Expression::Call {
+        callee: Box::new(prim),
+        args,
+      });
+    }
+
+    Ok(prim)
+  }
+
+  fn arguments(&mut self) -> Result<Vec<Expression>> {
+    let mut args = vec![self.expression()?];
+    while self.match1(Token::Comma) {
+      args.push(self.expression()?);
+    }
+
+    Ok(args)
+  }
+
   fn primary(&mut self) -> Result<Expression> {
     let tok = match self.advance() {
       Token::LeftParen => {
