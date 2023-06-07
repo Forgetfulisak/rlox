@@ -1,8 +1,6 @@
 use std::fmt::{Debug, Display};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use anyhow::anyhow;
-
 use crate::environ::Environ;
 use crate::parser::{Expression, Literal, Operator, Stmt, UnaryOp};
 
@@ -231,13 +229,13 @@ fn is_less_eq(v1: LoxValue, v2: LoxValue) -> bool {
 }
 
 #[derive(Debug, Clone)]
-enum LoxCallable {
+pub enum LoxCallable {
   Clock,
-  Normal,
+  _Normal,
 }
 
 impl LoxCallable {
-  pub fn call(&mut self, interpreter: &mut Interpreter, args: Vec<LoxValue>) -> LoxValue {
+  pub fn call(&mut self, _interpreter: &mut Interpreter, _args: Vec<LoxValue>) -> LoxValue {
     match self {
       LoxCallable::Clock => LoxValue::Number(
         SystemTime::now()
@@ -245,14 +243,14 @@ impl LoxCallable {
           .expect("Time goes forward")
           .as_secs_f64(),
       ),
-      LoxCallable::Normal => todo!(),
+      LoxCallable::_Normal => todo!(),
     }
   }
 
   pub fn arity(&self) -> usize {
     match self {
       LoxCallable::Clock => 0,
-      LoxCallable::Normal => 0,
+      LoxCallable::_Normal => 0,
     }
   }
 }

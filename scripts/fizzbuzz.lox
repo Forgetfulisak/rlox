@@ -1,21 +1,15 @@
-var c = 0;
-
 for (var a = 0; a <= 30; a = a + 1) {
 
     var b1 = a % 3;
     var b2 = a % 5;
 
     if ((b1 == 0) and (b2 == 0)) {
-        c = 15;
-//        print "fizzbuzz";
+        print "fizzbuzz";
     } else if (b1 == 0) {
-        c = 3;
-//       print "fizz";
+       print "fizz";
     } else if (b2 == 0) {
-        c = 5;
-//       print "buzz";
+        print "buzz";
     } else {
-        c = 1;
-//        print a;
+        print a;
     }
 }
