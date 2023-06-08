@@ -4,7 +4,7 @@ mod interpreter;
 mod parser;
 mod scanner;
 
-use interpreter::Interpreter;
+use interpreter::{Interpreter, LoxValue};
 
 use crate::{error::Result, scanner::Scanner};
 
@@ -13,14 +13,14 @@ use std::{
   io::{stdin, stdout, Write},
 };
 
-fn run(source: String, interpreter: &mut Interpreter) -> Result<()> {
+fn run(source: String, interpreter: &mut Interpreter) -> Result<LoxValue> {
   let mut scanner = Scanner::new(source.as_str());
   let tokens = scanner.scan_tokens().unwrap();
   // dbg!(&tokens);
   let mut parser = parser::Parser::new(tokens);
   let res = parser.parse()?;
-  interpreter.interpret(res);
-  Ok(())
+  let val = interpreter.interpret(res);
+  Ok(val)
 }
 
 fn run_prompt() -> Result<()> {
@@ -42,7 +42,8 @@ fn run_prompt() -> Result<()> {
 
     let res = run(line, &mut interpreter);
     match res {
-      Ok(_) => (),
+      Ok(LoxValue::Void) => (),
+      Ok(val) => println!("# {}", val),
       Err(err) => {
         dbg!(err);
       },

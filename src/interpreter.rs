@@ -21,10 +21,12 @@ impl Interpreter {
     inter
   }
 
-  pub fn interpret(&mut self, stmts: Vec<Stmt>) {
+  pub fn interpret(&mut self, stmts: Vec<Stmt>) -> LoxValue {
+    let mut val = LoxValue::Void;
     for stmt in stmts {
-      self.execute(stmt);
+      val = self.execute(stmt);
     }
+    val
   }
 
   pub fn execute(&mut self, stmt: Stmt) -> LoxValue {
