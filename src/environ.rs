@@ -1,14 +1,17 @@
 use crate::interpreter::LoxValue;
-use std::collections::{hash_map::Entry, HashMap};
+use std::{
+  collections::{hash_map::Entry, HashMap},
+  sync::{Arc, Mutex},
+};
 
 #[derive(Default)]
 pub struct Environ {
   pub values: HashMap<String, LoxValue>,
-  pub enclosing: Option<Box<Environ>>,
+  pub enclosing: Option<Arc<Mutex<Environ>>>,
 }
 
 impl Environ {
-  pub fn new(enclosing: Option<Box<Environ>>) -> Self {
+  pub fn new(enclosing: Option<Arc<Mutex<Environ>>>) -> Self {
     Environ {
       values: HashMap::new(),
       enclosing,
@@ -26,7 +29,7 @@ impl Environ {
     }
 
     if let Some(ref mut enclosing) = self.enclosing {
-      enclosing.assign(name, val);
+      enclosing.lock().unwrap().assign(name, val);
     }
   }
 
@@ -36,7 +39,7 @@ impl Environ {
     }
 
     if let Some(ref enclosing) = self.enclosing {
-      return enclosing.get(name);
+      return enclosing.lock().unwrap().get(name);
     }
 
     panic!("Undefined variable");

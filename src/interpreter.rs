@@ -1,21 +1,28 @@
 use std::fmt::{Debug, Display};
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::environ::Environ;
 use crate::parser::{Expression, Literal, Operator, Stmt, UnaryOp};
 
 pub struct Interpreter {
-  pub env: Environ,
+  pub cur_env: Arc<Mutex<Environ>>,
+  pub global: Arc<Mutex<Environ>>,
 }
 
 impl Interpreter {
   pub fn new() -> Self {
-    let mut inter = Interpreter {
-      env: Environ::new(None),
+    let env = Arc::new(Mutex::new(Environ::new(None)));
+
+    let inter = Interpreter {
+      cur_env: env.clone(),
+      global: env,
     };
 
     inter
-      .env
+      .cur_env
+      .lock()
+      .unwrap()
       .define("clock".to_string(), LoxValue::LoxCallable(LoxCallable::Clock));
 
     inter
@@ -50,14 +57,8 @@ impl Interpreter {
         LoxValue::Void
       },
       Stmt::Block(decls) => {
-        let prev = std::mem::take(&mut self.env);
-        self.env = Environ::new(Some(Box::new(prev)));
-        for decl in decls {
-          self.execute(decl);
-        }
-        // Good lord...
-        self.env = *std::mem::take(&mut self.env.enclosing).unwrap();
-        LoxValue::Void
+        let new_env = Arc::new(Mutex::new(Environ::new(Some(self.cur_env.clone()))));
+        self.execute_block(decls, new_env)
       },
       Stmt::While { cond, body } => {
         while is_truthy(self.evaluate(cond.clone())) {
@@ -72,11 +73,31 @@ impl Interpreter {
           None => LoxValue::Nil,
         };
 
-        self.env.define(ident, val);
+        self.cur_env.lock().unwrap().define(ident, val);
+        LoxValue::Void
+      },
+      Stmt::Fun { ident, params, body } => {
+        let fun = LoxFunction::new(ident, params, body);
+        self
+          .cur_env
+          .lock()
+          .unwrap()
+          .define(fun.ident.to_string(), LoxValue::LoxCallable(LoxCallable::LoxFun(fun)));
         LoxValue::Void
       },
       // Stmt::ForStmt { .. } => panic!("Should be desugared away"),
     }
+  }
+
+  fn execute_block(&mut self, body: Vec<Stmt>, new_env: Arc<Mutex<Environ>>) -> LoxValue {
+    let prev = self.cur_env.clone();
+
+    self.cur_env = new_env;
+    for stmt in body {
+      self.execute(stmt);
+    }
+    self.cur_env = prev;
+    LoxValue::Void
   }
 
   fn val_from_lit(&self, lit: Literal) -> LoxValue {
@@ -86,7 +107,7 @@ impl Interpreter {
       Literal::True => LoxValue::Boolean(true),
       Literal::False => LoxValue::Boolean(false),
       Literal::Nil => LoxValue::Nil,
-      Literal::Identifier(ident) => self.env.get(ident),
+      Literal::Identifier(ident) => self.cur_env.lock().unwrap().get(ident),
     }
   }
 
@@ -136,7 +157,7 @@ impl Interpreter {
       },
       Expression::Assignment { ident, value } => {
         let val = self.evaluate(*value);
-        self.env.assign(ident, val);
+        self.cur_env.lock().unwrap().assign(ident, val);
 
         LoxValue::Void
       },
@@ -233,11 +254,11 @@ fn is_less_eq(v1: LoxValue, v2: LoxValue) -> bool {
 #[derive(Debug, Clone)]
 pub enum LoxCallable {
   Clock,
-  _Normal,
+  LoxFun(LoxFunction),
 }
 
 impl LoxCallable {
-  pub fn call(&mut self, _interpreter: &mut Interpreter, _args: Vec<LoxValue>) -> LoxValue {
+  pub fn call(&mut self, interpreter: &mut Interpreter, args: Vec<LoxValue>) -> LoxValue {
     match self {
       LoxCallable::Clock => LoxValue::Number(
         SystemTime::now()
@@ -245,15 +266,37 @@ impl LoxCallable {
           .expect("Time goes forward")
           .as_secs_f64(),
       ),
-      LoxCallable::_Normal => todo!(),
+      LoxCallable::LoxFun(fun) => {
+        let mut env = Environ::new(Some(interpreter.global.clone()));
+
+        for (param, arg) in fun.params.iter().zip(args) {
+          env.define(param.to_string(), arg);
+        }
+
+        interpreter.execute_block(fun.body.clone(), Arc::new(Mutex::new(env)));
+        LoxValue::Void
+      },
     }
   }
 
   pub fn arity(&self) -> usize {
     match self {
       LoxCallable::Clock => 0,
-      LoxCallable::_Normal => 0,
+      LoxCallable::LoxFun(fun) => fun.params.len(),
     }
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct LoxFunction {
+  ident: String,
+  params: Vec<String>,
+  body: Vec<Stmt>,
+}
+
+impl LoxFunction {
+  pub fn new(ident: String, params: Vec<String>, body: Vec<Stmt>) -> Self {
+    LoxFunction { ident, params, body }
   }
 }
 
@@ -279,7 +322,7 @@ impl LoxCallable {
 
 //   fn arity(&self) -> usize {
 //     todo!()
-//   }
+//   },
 // }
 
 // #[derive(Debug, Clone)]

@@ -6,6 +6,11 @@ use anyhow::{anyhow, Ok};
 
 #[derive(Debug, Clone)]
 pub enum Stmt {
+  Fun {
+    ident: String,
+    params: Vec<String>,
+    body: Vec<Stmt>,
+  },
   VarDecl {
     ident: String,
     exp: Option<Expression>,
@@ -168,15 +173,59 @@ impl Parser {
   fn declaration(&mut self) -> Result<Stmt> {
     if self.match1(Token::Var) {
       Ok(self.var_declaration()?)
+    } else if self.match1(Token::Fun) {
+      Ok(self.fun_declaration("function")?)
     } else {
       let stmt = self.statement()?;
       Ok(stmt)
     }
+  }
 
-    // match decl {
-    //   Ok(decl) => Some(decl),
-    //   Err(_) => None,
-    // }
+  fn fun_declaration(&mut self, _kind: &str) -> Result<Stmt> {
+    let ident = if let Expression::Literal(Literal::Identifier(ident)) = self.primary()? {
+      ident
+    } else {
+      Err(anyhow!("Expected parameter name"))?
+    };
+
+    // assert!(matches!(Expression::Literal(Literal::Identifier(_))), ident));
+    if !self.match1(Token::LeftParen) {
+      Err(anyhow!("Expected ( in function declaration"))?
+    }
+
+    let mut params = vec![];
+    if !self.check(Token::RightParen) {
+      let exp = self.expression()?;
+      if let Expression::Literal(Literal::Identifier(ident)) = exp {
+        params.push(ident);
+      } else {
+        Err(anyhow!("Expected parameter name"))?
+      }
+      while self.match1(Token::Comma) {
+        let exp = self.expression()?;
+        if let Expression::Literal(Literal::Identifier(ident)) = exp {
+          params.push(ident);
+        } else {
+          Err(anyhow!("Expected parameter name"))?
+        }
+      }
+
+      if params.len() >= 255 {
+        Err(anyhow!("Can't have more than 255 params"))?
+      }
+    }
+
+    if !self.match1(Token::RightParen) {
+      Err(anyhow!("Expected ) in after parameters in function declaration"))?
+    }
+
+    let body = if self.match1(Token::LeftBrace) {
+      self.block()?
+    } else {
+      Err(anyhow!("Expected block after function parameters"))?
+    };
+
+    Ok(Stmt::Fun { ident, params, body })
   }
 
   fn var_declaration(&mut self) -> Result<Stmt> {
@@ -217,6 +266,10 @@ impl Parser {
   }
 
   fn block_statement(&mut self) -> Result<Stmt> {
+    Ok(Stmt::Block(self.block()?))
+  }
+
+  fn block(&mut self) -> Result<Vec<Stmt>> {
     let mut decls = vec![];
     while !self.check(Token::RightBrace) && !self.is_at_end() {
       decls.push(self.declaration()?);
@@ -225,8 +278,7 @@ impl Parser {
     if !self.match1(Token::RightBrace) {
       Err(anyhow!("Expected }} after block"))?
     }
-
-    Ok(Stmt::Block(decls))
+    Ok(decls)
   }
 
   fn if_statement(&mut self) -> Result<Stmt> {
