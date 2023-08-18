@@ -5,6 +5,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::environ::Environ;
 use crate::parser::{Expression, Literal, Operator, Stmt, UnaryOp};
 
+#[derive(Debug)]
+pub enum Halt {
+  Return(Option<LoxValue>),
+  // Panic(),
+}
+
 pub struct Interpreter {
   pub cur_env: Arc<Mutex<Environ>>,
   pub global: Arc<Mutex<Environ>>,
@@ -31,13 +37,15 @@ impl Interpreter {
   pub fn interpret(&mut self, stmts: Vec<Stmt>) -> LoxValue {
     let mut val = LoxValue::Void;
     for stmt in stmts {
-      val = self.execute(stmt);
+      val = self
+        .execute(stmt)
+        .expect("A single interpreted line should only halt on panic");
     }
     val
   }
 
-  pub fn execute(&mut self, stmt: Stmt) -> LoxValue {
-    match stmt {
+  pub fn execute(&mut self, stmt: Stmt) -> Result<LoxValue, Halt> {
+    Ok(match stmt {
       Stmt::Expr(exp) => self.evaluate(exp),
       Stmt::Print(exp) => {
         let val = self.evaluate(exp);
@@ -50,19 +58,19 @@ impl Interpreter {
         else_stmt,
       } => {
         if is_truthy(self.evaluate(cond)) {
-          self.execute(*if_stmt);
+          self.execute(*if_stmt)?;
         } else if let Some(stmt) = else_stmt {
-          self.execute(*stmt);
+          self.execute(*stmt)?;
         }
         LoxValue::Void
       },
       Stmt::Block(decls) => {
         let new_env = Arc::new(Mutex::new(Environ::new(Some(self.cur_env.clone()))));
-        self.execute_block(decls, new_env)
+        self.execute_block(decls, new_env)?
       },
       Stmt::While { cond, body } => {
         while is_truthy(self.evaluate(cond.clone())) {
-          self.execute(*body.clone());
+          self.execute(*body.clone())?;
         }
 
         LoxValue::Void
@@ -85,18 +93,24 @@ impl Interpreter {
           .define(fun.ident.to_string(), LoxValue::LoxCallable(LoxCallable::LoxFun(fun)));
         LoxValue::Void
       },
+      Stmt::Return(value) => Err(Halt::Return(value.map(|v| self.evaluate(v))))?,
       // Stmt::ForStmt { .. } => panic!("Should be desugared away"),
-    }
+    })
   }
 
-  fn execute_block(&mut self, body: Vec<Stmt>, new_env: Arc<Mutex<Environ>>) -> LoxValue {
+  fn execute_block(&mut self, body: Vec<Stmt>, new_env: Arc<Mutex<Environ>>) -> Result<LoxValue, Halt> {
     let prev = self.cur_env.clone();
+
     self.cur_env = new_env;
     for stmt in body {
-      self.execute(stmt);
+      // God this is ugly
+      self.execute(stmt).map_err(|err| {
+        self.cur_env = prev.clone();
+        err
+      })?;
     }
     self.cur_env = prev;
-    LoxValue::Void
+    Ok(LoxValue::Void) // Unused
   }
 
   fn val_from_lit(&self, lit: Literal) -> LoxValue {
@@ -272,8 +286,11 @@ impl LoxCallable {
           fun_env.define(param.to_string(), arg);
         }
 
-        interpreter.execute_block(fun.body.clone(), Arc::new(Mutex::new(fun_env)));
-        LoxValue::Void
+        match interpreter.execute_block(fun.body.clone(), Arc::new(Mutex::new(fun_env))) {
+          Ok(_) => LoxValue::Void,
+          Err(Halt::Return(Some(val))) => val,
+          Err(Halt::Return(None)) => LoxValue::Void,
+        }
       },
     }
   }

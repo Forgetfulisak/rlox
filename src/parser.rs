@@ -27,6 +27,7 @@ pub enum Stmt {
     body: Box<Stmt>,
   },
   Block(Vec<Stmt>),
+  Return(Option<Expression>),
 }
 
 #[derive(Debug, Clone)]
@@ -260,9 +261,24 @@ impl Parser {
       self.while_statement()
     } else if self.match1(Token::For) {
       self.for_statement()
+    } else if self.match1(Token::Return) {
+      self.return_statement()
     } else {
       self.expression_statment()
     }
+  }
+
+  fn return_statement(&mut self) -> Result<Stmt>{
+    let value = if !self.check(Token::Semicolon) {
+      Some(self.expression()?)
+    } else {
+      None
+    };
+
+    if !self.match1(Token::Semicolon) {
+      Err(anyhow!("Expected ';' after return value."))?
+    }
+    Ok(Stmt::Return(value))
   }
 
   fn block_statement(&mut self) -> Result<Stmt> {
