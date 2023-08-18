@@ -91,7 +91,6 @@ impl Interpreter {
 
   fn execute_block(&mut self, body: Vec<Stmt>, new_env: Arc<Mutex<Environ>>) -> LoxValue {
     let prev = self.cur_env.clone();
-
     self.cur_env = new_env;
     for stmt in body {
       self.execute(stmt);
@@ -267,13 +266,13 @@ impl LoxCallable {
           .as_secs_f64(),
       ),
       LoxCallable::LoxFun(fun) => {
-        let mut env = Environ::new(Some(interpreter.global.clone()));
+        let mut fun_env = Environ::new(Some(interpreter.global.clone()));
 
         for (param, arg) in fun.params.iter().zip(args) {
-          env.define(param.to_string(), arg);
+          fun_env.define(param.to_string(), arg);
         }
 
-        interpreter.execute_block(fun.body.clone(), Arc::new(Mutex::new(env)));
+        interpreter.execute_block(fun.body.clone(), Arc::new(Mutex::new(fun_env)));
         LoxValue::Void
       },
     }

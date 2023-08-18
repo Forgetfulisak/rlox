@@ -4,7 +4,7 @@ use std::{
   sync::{Arc, Mutex},
 };
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Environ {
   pub values: HashMap<String, LoxValue>,
   pub enclosing: Option<Arc<Mutex<Environ>>>,
@@ -18,10 +18,13 @@ impl Environ {
     }
   }
 
+  // Define variable in current scope
   pub fn define(&mut self, name: String, val: LoxValue) {
     self.values.insert(name, val);
   }
 
+  // Assign value to variable defined in the smallest scope. 
+  // Search from the current scope, and move out to global.
   pub fn assign(&mut self, name: String, val: LoxValue) {
     if let Entry::Occupied(mut e) = self.values.entry(name.to_string()) {
       e.insert(val);
@@ -33,6 +36,7 @@ impl Environ {
     }
   }
 
+  // Search for variable starting in smallest scope
   pub fn get(&self, name: String) -> LoxValue {
     if let Some(val) = self.values.get(&name) {
       return val.clone();

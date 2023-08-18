@@ -1,8 +1,12 @@
-fun fib(n) {
+
+fun fib(side, n) {
+    var n2 = n;
     if (n > 0) {
+        print side;
         print n;
-        fib(n-1);
+        fib("left", n-1);
+        fib("right", n2-2);
     }
 }
-
-fib(10);
+var p = 2;
+fib("start", 4);
