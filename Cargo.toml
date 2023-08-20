@@ -2,10 +2,37 @@
 name = "rlox"
 version = "0.1.0"
 edition = "2021"
+panic = "abort"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1.0.71"
+heapless = "0.7.16"
+micromap = "0.0.14"
 phf = { version = "0.11.1", features = ["macros"] }
 rand = "0.8.5"
+
+
+[profile.release]
+opt-level = 3
+debug = false
+split-debuginfo = '...'  # Platform-specific.
+debug-assertions = false
+overflow-checks = false
+lto = "fat"
+panic = 'abort'
+incremental = false
+codegen-units = 1
+rpath = false
+
+
+
+[profile.release.build-override]
+opt-level = 3
+debug = false
+split-debuginfo = '...'  # Platform-specific.
+debug-assertions = false
+overflow-checks = false
+incremental = false
+codegen-units = 1
