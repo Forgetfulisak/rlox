@@ -1,7 +1,9 @@
 use crate::interpreter::LoxValue;
 use rand::{self, distributions::Alphanumeric, Rng};
 use std::{
+  cell::RefCell,
   collections::{hash_map::Entry, HashMap},
+  rc::Rc,
   sync::{Arc, Mutex},
 };
 
@@ -9,11 +11,11 @@ use std::{
 pub struct Environ {
   // pub env_id: String,
   pub values: HashMap<String, LoxValue>,
-  pub enclosing: Option<Arc<Mutex<Environ>>>,
+  pub enclosing: Option<Rc<RefCell<Environ>>>,
 }
 
 impl Environ {
-  pub fn new(enclosing: Option<Arc<Mutex<Environ>>>) -> Self {
+  pub fn new(enclosing: Option<Rc<RefCell<Environ>>>) -> Self {
     Environ {
       // env_id: rand::thread_rng()
       //   .sample_iter(&Alphanumeric)
@@ -39,7 +41,8 @@ impl Environ {
     }
 
     if let Some(ref mut enclosing) = self.enclosing {
-      enclosing.lock().unwrap().assign(name, val);
+      enclosing.borrow_mut().assign(name, val);
+      // enclosing.lock().unwrap().assign(name, val);
     }
   }
 
@@ -50,7 +53,8 @@ impl Environ {
     }
 
     if let Some(ref enclosing) = self.enclosing {
-      return enclosing.lock().unwrap().get(name);
+      return enclosing.borrow().get(name);
+      // return enclosing.lock().unwrap().get(name);
     }
 
     panic!("Undefined variable! {}", name);

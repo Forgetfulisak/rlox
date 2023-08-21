@@ -1,4 +1,4 @@
-for (var a = 0; a <= 30; a = a + 1) {
+for (var a = 0; a <= 1000; a = a + 1) {
 
     var b1 = a % 3;
     var b2 = a % 5;

@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::fmt::{Debug, Display};
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -12,24 +14,29 @@ pub enum Halt {
 }
 
 pub struct Interpreter {
-  pub cur_env: Arc<Mutex<Environ>>,
-  pub global: Arc<Mutex<Environ>>,
+  pub cur_env: Rc<RefCell<Environ>>,
+  pub global: Rc<RefCell<Environ>>,
 }
 
 impl Interpreter {
   pub fn new() -> Self {
-    let env = Arc::new(Mutex::new(Environ::new(None)));
+    let env = Rc::new(RefCell::new(Environ::new(None)));
 
-    let inter = Interpreter {
+    let mut inter = Interpreter {
       cur_env: env.clone(),
       global: env,
     };
 
     inter
       .cur_env
-      .lock()
-      .unwrap()
+      .borrow_mut()
       .define("clock".to_string(), LoxValue::LoxCallable(LoxCallable::Clock));
+
+    // inter
+    //   .cur_env
+    //   .lock()
+    //   .unwrap()
+    //   .define("clock".to_string(), LoxValue::LoxCallable(LoxCallable::Clock));
 
     inter
   }
@@ -65,7 +72,7 @@ impl Interpreter {
         LoxValue::Void
       },
       Stmt::Block(decls) => {
-        let new_env = Arc::new(Mutex::new(Environ::new(Some(self.cur_env.clone()))));
+        let new_env = Rc::new(RefCell::new(Environ::new(Some(self.cur_env.clone()))));
         self.execute_block(decls, new_env)?
       },
       Stmt::While { cond, body } => {
@@ -81,16 +88,23 @@ impl Interpreter {
           None => LoxValue::Nil,
         };
 
-        self.cur_env.lock().unwrap().define(ident, val);
+        // self.cur_env.lock().unwrap().define(ident, val);
+        self.cur_env.borrow_mut().define(ident, val);
         LoxValue::Void
       },
       Stmt::Fun { ident, params, body } => {
         let fun = LoxFunction::new(ident, params, body);
         self
           .cur_env
-          .lock()
-          .unwrap()
+          .borrow_mut()
+          // .get_mut()
           .define(fun.ident.to_string(), LoxValue::LoxCallable(LoxCallable::LoxFun(fun)));
+
+        // self
+        //   .cur_env
+        //   .lock()
+        //   .unwrap()
+        //   .define(fun.ident.to_string(), LoxValue::LoxCallable(LoxCallable::LoxFun(fun)));
         LoxValue::Void
       },
       Stmt::Return(value) => Err(Halt::Return(value.map(|v| self.evaluate(v))))?,
@@ -98,7 +112,7 @@ impl Interpreter {
     })
   }
 
-  fn execute_block(&mut self, body: Vec<Stmt>, new_env: Arc<Mutex<Environ>>) -> Result<LoxValue, Halt> {
+  fn execute_block(&mut self, body: Vec<Stmt>, new_env: Rc<RefCell<Environ>>) -> Result<LoxValue, Halt> {
     let prev = self.cur_env.clone();
 
     self.cur_env = new_env;
@@ -120,7 +134,8 @@ impl Interpreter {
       Literal::True => LoxValue::Boolean(true),
       Literal::False => LoxValue::Boolean(false),
       Literal::Nil => LoxValue::Nil,
-      Literal::Identifier(ident) => self.cur_env.lock().unwrap().get(ident),
+      Literal::Identifier(ident) => self.cur_env.borrow().get(ident),
+      // Literal::Identifier(ident) => self.cur_env.lock().unwrap().get(ident),
     }
   }
 
@@ -170,7 +185,7 @@ impl Interpreter {
       },
       Expression::Assignment { ident, value } => {
         let val = self.evaluate(*value);
-        self.cur_env.lock().unwrap().assign(ident, val);
+        self.cur_env.borrow_mut().assign(ident, val);
 
         LoxValue::Void
       },
@@ -286,7 +301,7 @@ impl LoxCallable {
           fun_env.define(param.to_string(), arg);
         }
 
-        match interpreter.execute_block(fun.body.clone(), Arc::new(Mutex::new(fun_env))) {
+        match interpreter.execute_block(fun.body.clone(), Rc::new(RefCell::new(fun_env))) {
           Ok(_) => LoxValue::Void,
           Err(Halt::Return(Some(val))) => val,
           Err(Halt::Return(None)) => LoxValue::Void,
